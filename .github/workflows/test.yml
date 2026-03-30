@@ -22,7 +22,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: pytest -v --junit-xml=test-results.xml
+        run: pytest -v --junit-xml=test-results.xml --cov=app --cov-report=term-missing
 
       - name: Publish test results
         uses: dorny/test-reporter@v1
