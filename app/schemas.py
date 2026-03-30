@@ -160,8 +160,8 @@ class BetTypeSummary(BaseModel):
     roi_percent: float
 
 class BettingSummary(BaseModel):
-    total_staked: float
-    total_returned: float
+    staked: float
+    returned: float
     profit: float
     roi_percent: float
     win_rate_percent: float
