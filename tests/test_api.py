@@ -11,6 +11,9 @@ All tests use an in-memory SQLite database so no real PostgreSQL is needed.
 The .env DATABASE_URL is overridden via the app's dependency injection system.
 """
 
+import os
+os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
