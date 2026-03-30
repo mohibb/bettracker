@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.database import engine, Base
-from app.routers import config, odds, matches, arbitrage, cart, bets, results, notifications
+from app.routers import config, odds, matches, arbitrage, cart, bets, results, notifications, leagues
 from app.scheduler import start_scheduler
 
 
@@ -29,3 +29,4 @@ app.include_router(cart.router)
 app.include_router(bets.router)
 app.include_router(results.router)
 app.include_router(notifications.router)
+app.include_router(leagues.router)

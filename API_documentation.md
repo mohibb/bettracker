@@ -10,6 +10,7 @@
 
 - [Overview](#overview)
 - [Config](#config)
+- [Leagues](#leagues)
 - [Odds](#odds)
 - [Matches](#matches)
 - [Arbitrage](#arbitrage)
@@ -103,6 +104,90 @@ Add a new odds API key to the rotation.
 ```
 
 **Response:** `ApiKeyResponse`
+
+---
+
+## Leagues
+
+Manage the leagues the app tracks. Leagues must exist before odds can be fetched for them. Use `seed_leagues.py` to populate all supported leagues on first run.
+
+### `GET /leagues`
+
+List all leagues, ordered by country and name.
+
+**Response:** `LeagueResponse[]`
+
+---
+
+### `GET /leagues/{id}`
+
+Get a single league by ID.
+
+**Path Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | integer | League ID |
+
+**Response:** `LeagueResponse`
+
+**Errors:**
+
+| Code | Description |
+|------|-------------|
+| `404` | League not found |
+
+---
+
+### `POST /leagues`
+
+Add a new league.
+
+**Request Body:** `LeagueBase`
+
+```json
+{
+  "name": "Premier League",
+  "key": "soccer_epl",
+  "country": "England"
+}
+```
+
+The `key` must match the sport key used by the-odds-api.com. Returns `400` if a league with that key already exists.
+
+**Response:** `LeagueResponse`
+
+**Errors:**
+
+| Code | Description |
+|------|-------------|
+| `400` | League with that key already exists |
+
+---
+
+### `DELETE /leagues/{id}`
+
+Delete a league by ID.
+
+**Path Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | integer | League ID |
+
+**Response:**
+
+```json
+{
+  "message": "League 'EPL' deleted"
+}
+```
+
+**Errors:**
+
+| Code | Description |
+|------|-------------|
+| `404` | League not found |
 
 ---
 
@@ -565,6 +650,17 @@ Delete all notifications that have already been read.
 ---
 
 ## Schemas
+
+### `LeagueResponse`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | integer | League ID |
+| `name` | string | Display name, e.g. `"EPL"` |
+| `key` | string | the-odds-api.com sport key, e.g. `"soccer_epl"` |
+| `country` | string | Country or region, e.g. `"England"` |
+
+---
 
 ### `BookmakerResponse`
 
