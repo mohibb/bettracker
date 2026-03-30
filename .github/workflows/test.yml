@@ -22,4 +22,12 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: pytest -v
+        run: pytest -v --junit-xml=test-results.xml
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: pytest
+          path: test-results.xml
+          reporter: java-junit
