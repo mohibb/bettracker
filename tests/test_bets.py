@@ -1,4 +1,4 @@
-from conftest import TestingSessionLocal
+from factories import TestingSessionLocal
 from app.models import Notification
 
 
