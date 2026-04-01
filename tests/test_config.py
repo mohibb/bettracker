@@ -1,4 +1,4 @@
-from conftest import make_league, make_match, make_bookmaker, TestingSessionLocal
+from factories import make_bookmaker, make_api_key, TestingSessionLocal
 from app.models import ArbitrageOpportunity
 
 
