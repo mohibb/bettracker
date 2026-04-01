@@ -1,30 +1,27 @@
 from datetime import datetime
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.models import Bet, BetStatus
+from app.models import ApiKey
 
 
-def settle_bet(bet: Bet, db: Session) -> None:
+def get_active_api_key(db: Session) -> ApiKey:
     """
-    Evaluate all legs and mark the bet as won, lost, or void.
-
-    Rules:
-      - Void:  any leg is void (e.g. match cancelled) — stake is returned
-      - Won:   all legs won
-      - Lost:  any leg lost (and none void)
-
-    Called automatically when match results arrive via results router.
+    Get the next available API key with quota remaining.
+    Automatically skips exhausted keys.
+    Raises 503 if none are available.
     """
-    leg_results = [leg.result for leg in bet.legs]
+    key = db.query(ApiKey).filter(
+        ApiKey.is_active == True,
+        ApiKey.requests_used < ApiKey.requests_limit
+    ).order_by(ApiKey.id).first()
 
-    if any(r == BetStatus.void for r in leg_results):
-        bet.status = BetStatus.void
-        bet.actual_return = bet.stake
-    elif all(r == BetStatus.won for r in leg_results):
-        bet.status = BetStatus.won
-        bet.actual_return = bet.potential_return
-    else:
-        bet.status = BetStatus.lost
-        bet.actual_return = 0.0
+    if not key:
+        raise HTTPException(status_code=503, detail="No API keys available")
+    return key
 
-    bet.settled_at = datetime.utcnow()
+
+def use_api_key(key: ApiKey, db: Session) -> None:
+    """Increment usage count on an API key after consuming a request."""
+    key.requests_used += 1
+    key.last_used_at = datetime.utcnow()
     db.commit()
