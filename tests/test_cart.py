@@ -1,4 +1,4 @@
-from conftest import (
+from factories import (
     make_league, make_match, make_bookmaker, make_odds,
     make_bet, make_bet_leg, TestingSessionLocal
 )
