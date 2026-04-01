@@ -1,4 +1,4 @@
-from conftest import make_league, make_match, make_bookmaker, make_odds, TestingSessionLocal
+from factories import make_league, make_match, make_bookmaker, TestingSessionLocal
 from app.models import MatchStatus
 
 
