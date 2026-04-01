@@ -1,73 +1,78 @@
-from unittest.mock import patch, MagicMock
 from factories import make_league, make_match, make_bookmaker, make_odds, TestingSessionLocal
+from app.models import MatchStatus
 
 
-class TestGetOdds:
-    def test_get_latest_odds_empty(self, client):
-        r = client.get("/odds/")
+class TestGetMatches:
+    def test_empty_list(self, client):
+        r = client.get("/matches")
         assert r.status_code == 200
         assert r.json() == []
 
-    def test_get_latest_odds(self, client):
+    def test_returns_matches(self, client):
         db = TestingSessionLocal()
         league = make_league(db)
-        match = make_match(db, league.id)
-        bm = make_bookmaker(db)
-        make_odds(db, match.id, bm.id)
+        make_match(db, league.id)
         db.close()
 
-        r = client.get("/odds/")
+        r = client.get("/matches")
         assert r.status_code == 200
         assert len(r.json()) == 1
 
-    def test_get_odds_for_match(self, client):
+    def test_filter_by_status(self, client):
+        db = TestingSessionLocal()
+        league = make_league(db)
+        make_match(db, league.id, match_id="m1", status=MatchStatus.upcoming)
+        make_match(db, league.id, match_id="m2", status=MatchStatus.finished)
+        db.close()
+
+        r = client.get("/matches?status=upcoming")
+        assert r.status_code == 200
+        assert len(r.json()) == 1
+        assert r.json()[0]["id"] == "m1"
+
+    def test_filter_by_league_id(self, client):
+        db = TestingSessionLocal()
+        l1 = make_league(db, key="epl")
+        l2 = make_league(db, name="La Liga", key="la_liga", country="Spain")
+        l1_id = l1.id
+        make_match(db, l1.id, match_id="m1")
+        make_match(db, l2.id, match_id="m2")
+        db.close()
+
+        r = client.get(f"/matches?league_id={l1_id}")
+        assert r.status_code == 200
+        ids = [m["id"] for m in r.json()]
+        assert "m1" in ids
+        assert "m2" not in ids
+
+
+class TestGetMatch:
+    def test_get_existing_match(self, client):
+        db = TestingSessionLocal()
+        league = make_league(db)
+        make_match(db, league.id)
+        db.close()
+
+        r = client.get("/matches/match_abc123")
+        assert r.status_code == 200
+        assert r.json()["home_team"] == "Arsenal"
+
+    def test_get_nonexistent_match_returns_404(self, client):
+        r = client.get("/matches/does_not_exist")
+        assert r.status_code == 404
+
+
+class TestOddsHistory:
+    def test_returns_odds_history(self, client):
         db = TestingSessionLocal()
         league = make_league(db)
         match = make_match(db, league.id)
-        bm = make_bookmaker(db)
-        make_odds(db, match.id, bm.id)
         match_id = match.id
+        bm = make_bookmaker(db)
+        make_odds(db, match.id, bm.id, home=2.0)
+        make_odds(db, match.id, bm.id, home=1.9)
         db.close()
 
-        r = client.get(f"/odds/{match_id}")
+        r = client.get(f"/matches/{match_id}/odds/history")
         assert r.status_code == 200
-        assert len(r.json()) == 1
-
-
-class TestFetchOdds:
-    def test_fetch_odds_no_api_key_returns_503(self, client):
-        r = client.post("/odds/fetch")
-        assert r.status_code == 503
-
-    def test_fetch_odds_stores_and_detects_arbitrage(self, client):
-        db = TestingSessionLocal()
-        make_api_key(db)
-        make_league(db)
-        make_bookmaker(db)
-        db.close()
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = [{
-            "id": "arb_match",
-            "home_team": "TeamA",
-            "away_team": "TeamB",
-            "commence_time": "2026-06-15T15:00:00Z",
-            "bookmakers": [{
-                "key": "unibet",
-                "markets": [{"outcomes": [
-                    {"name": "TeamA", "price": 1.9},
-                    {"name": "Draw",  "price": 3.4},
-                    {"name": "TeamB", "price": 6.0},
-                ]}]
-            }]
-        }]
-
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client_cls.return_value.__enter__.return_value = mock_client
-            mock_client.get.return_value = mock_response
-            r = client.post("/odds/fetch")
-
-        assert r.status_code == 200
-        assert r.json()["arbitrage_opportunities_found"] == 1
+        assert len(r.json()) == 2

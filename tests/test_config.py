@@ -1,60 +1,83 @@
 from factories import make_bookmaker, make_api_key, TestingSessionLocal
-from app.models import ArbitrageOpportunity
 
 
-class TestArbitrage:
-    def _seed_arb(self, db):
-        league = make_league(db)
-        match = make_match(db, league.id)
-        bm = make_bookmaker(db)
-        arb = ArbitrageOpportunity(
-            match_id=match.id,
-            home_odds=2.1,
-            draw_odds=3.5,
-            away_odds=4.0,
-            home_bookmaker_id=bm.id,
-            draw_bookmaker_id=bm.id,
-            away_bookmaker_id=bm.id,
-            margin_percent=1.23,
-        )
-        db.add(arb)
-        db.commit()
-        db.refresh(arb)
-        return arb
-
-    def test_get_opportunities_empty(self, client):
-        r = client.get("/arbitrage/")
+class TestGetBookmakers:
+    def test_returns_empty_list(self, client):
+        r = client.get("/config/bookmakers")
         assert r.status_code == 200
         assert r.json() == []
 
-    def test_get_opportunities_returns_upcoming_only(self, client):
+    def test_returns_existing_bookmakers(self, client):
         db = TestingSessionLocal()
-        self._seed_arb(db)
+        make_bookmaker(db)
         db.close()
 
-        r = client.get("/arbitrage/")
+        r = client.get("/config/bookmakers")
         assert r.status_code == 200
-        assert len(r.json()) == 1
+        data = r.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Unibet"
 
-    def test_get_history(self, client):
+
+class TestAddBookmaker:
+    def test_add_bookmaker(self, client):
+        r = client.post("/config/bookmakers?name=Bet365&api_key=bet365")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["name"] == "Bet365"
+        assert body["api_key"] == "bet365"
+        assert body["is_active"] is True
+
+    def test_add_bookmaker_without_api_key(self, client):
+        r = client.post("/config/bookmakers?name=Manual")
+        assert r.status_code == 200
+        assert r.json()["api_key"] is None
+
+
+class TestToggleBookmaker:
+    def test_disable_bookmaker(self, client):
         db = TestingSessionLocal()
-        self._seed_arb(db)
+        bm = make_bookmaker(db)
+        bm_id = bm.id
         db.close()
 
-        r = client.get("/arbitrage/history")
+        r = client.patch(f"/config/bookmakers/{bm_id}?is_active=false")
         assert r.status_code == 200
-        assert len(r.json()) == 1
+        assert r.json()["is_active"] is False
 
-    def test_get_single_opportunity(self, client):
+    def test_enable_bookmaker(self, client):
         db = TestingSessionLocal()
-        arb = self._seed_arb(db)
-        arb_id = arb.id
+        bm = make_bookmaker(db, is_active=False)
+        bm_id = bm.id
         db.close()
 
-        r = client.get(f"/arbitrage/{arb_id}")
+        r = client.patch(f"/config/bookmakers/{bm_id}?is_active=true")
         assert r.status_code == 200
-        assert r.json()["margin_percent"] == 1.23
+        assert r.json()["is_active"] is True
 
-    def test_get_nonexistent_opportunity_returns_404(self, client):
-        r = client.get("/arbitrage/9999")
+    def test_toggle_nonexistent_bookmaker_returns_404(self, client):
+        r = client.patch("/config/bookmakers/999?is_active=false")
         assert r.status_code == 404
+
+
+class TestApiKeys:
+    def test_get_api_key_status_empty(self, client):
+        r = client.get("/config/api-keys/status")
+        assert r.status_code == 200
+        assert r.json() == []
+
+    def test_add_api_key(self, client):
+        r = client.post("/config/api-keys", json={"key": "my_key", "requests_limit": 200})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["requests_remaining"] == 200
+        assert body["requests_used"] == 0
+
+    def test_requests_remaining_is_calculated(self, client):
+        db = TestingSessionLocal()
+        make_api_key(db, used=100, limit=500)
+        db.close()
+
+        r = client.get("/config/api-keys/status")
+        assert r.status_code == 200
+        assert r.json()[0]["requests_remaining"] == 400

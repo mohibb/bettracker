@@ -1,78 +1,60 @@
 from factories import make_league, make_match, make_bookmaker, TestingSessionLocal
-from app.models import MatchStatus
+from app.models import ArbitrageOpportunity
 
 
-class TestGetMatches:
-    def test_empty_list(self, client):
-        r = client.get("/matches")
+class TestArbitrage:
+    def _seed_arb(self, db):
+        league = make_league(db)
+        match = make_match(db, league.id)
+        bm = make_bookmaker(db)
+        arb = ArbitrageOpportunity(
+            match_id=match.id,
+            home_odds=2.1,
+            draw_odds=3.5,
+            away_odds=4.0,
+            home_bookmaker_id=bm.id,
+            draw_bookmaker_id=bm.id,
+            away_bookmaker_id=bm.id,
+            margin_percent=1.23,
+        )
+        db.add(arb)
+        db.commit()
+        db.refresh(arb)
+        return arb
+
+    def test_get_opportunities_empty(self, client):
+        r = client.get("/arbitrage/")
         assert r.status_code == 200
         assert r.json() == []
 
-    def test_returns_matches(self, client):
+    def test_get_opportunities_returns_upcoming_only(self, client):
         db = TestingSessionLocal()
-        league = make_league(db)
-        make_match(db, league.id)
+        self._seed_arb(db)
         db.close()
 
-        r = client.get("/matches")
+        r = client.get("/arbitrage/")
         assert r.status_code == 200
         assert len(r.json()) == 1
 
-    def test_filter_by_status(self, client):
+    def test_get_history(self, client):
         db = TestingSessionLocal()
-        league = make_league(db)
-        make_match(db, league.id, match_id="m1", status=MatchStatus.upcoming)
-        make_match(db, league.id, match_id="m2", status=MatchStatus.finished)
+        self._seed_arb(db)
         db.close()
 
-        r = client.get("/matches?status=upcoming")
+        r = client.get("/arbitrage/history")
         assert r.status_code == 200
         assert len(r.json()) == 1
-        assert r.json()[0]["id"] == "m1"
 
-    def test_filter_by_league_id(self, client):
+    def test_get_single_opportunity(self, client):
         db = TestingSessionLocal()
-        l1 = make_league(db, key="epl")
-        l2 = make_league(db, name="La Liga", key="la_liga", country="Spain")
-        l1_id = l1.id
-        make_match(db, l1.id, match_id="m1")
-        make_match(db, l2.id, match_id="m2")
+        arb = self._seed_arb(db)
+        arb_id = arb.id
         db.close()
 
-        r = client.get(f"/matches?league_id={l1_id}")
+        r = client.get(f"/arbitrage/{arb_id}")
         assert r.status_code == 200
-        ids = [m["id"] for m in r.json()]
-        assert "m1" in ids
-        assert "m2" not in ids
+        assert r.json()["margin_percent"] == 1.23
 
-
-class TestGetMatch:
-    def test_get_existing_match(self, client):
-        db = TestingSessionLocal()
-        league = make_league(db)
-        make_match(db, league.id)
-        db.close()
-
-        r = client.get("/matches/match_abc123")
-        assert r.status_code == 200
-        assert r.json()["home_team"] == "Arsenal"
-
-    def test_get_nonexistent_match_returns_404(self, client):
-        r = client.get("/matches/does_not_exist")
+    def test_get_nonexistent_opportunity_returns_404(self, client):
+        r = client.get("/arbitrage/9999")
         assert r.status_code == 404
-
-
-class TestOddsHistory:
-    def test_returns_odds_history(self, client):
-        db = TestingSessionLocal()
-        league = make_league(db)
-        match = make_match(db, league.id)
-        match_id = match.id
-        bm = make_bookmaker(db)
-        make_odds(db, match.id, bm.id, home=2.0)
-        make_odds(db, match.id, bm.id, home=1.9)
-        db.close()
-
-        r = client.get(f"/matches/{match_id}/odds/history")
-        assert r.status_code == 200
-        assert len(r.json()) == 2

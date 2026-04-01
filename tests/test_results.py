@@ -1,59 +1,64 @@
-class TestCart:
-    def test_empty_cart(self, client):
-        r = client.get("/cart/")
+from unittest.mock import patch, MagicMock
+from factories import (
+    make_league, make_match, make_bookmaker, make_odds,
+    make_api_key, make_bet, make_bet_leg, TestingSessionLocal
+)
+from app.models import MatchStatus, MatchResult, Selection
+
+
+class TestResults:
+    def test_get_result_for_finished_match(self, client):
+        db = TestingSessionLocal()
+        league = make_league(db)
+        match = make_match(db, league.id, status=MatchStatus.finished)
+        match.home_goals = 2
+        match.away_goals = 1
+        match.result = MatchResult.home
+        match_id = match.id
+        db.commit()
+        db.close()
+
+        r = client.get(f"/results/{match_id}")
         assert r.status_code == 200
         body = r.json()
-        assert body["legs"] == []
-        assert body["bet_type"] == "empty"
+        assert body["result"] == "home"
+        assert body["home_goals"] == 2
 
-    def test_add_leg_to_cart(self, client):
-        r = client.post("/cart/legs", json={
-            "match_id": "m1", "bookmaker_id": 1, "selection": "home"
-        })
+    def test_get_result_not_found(self, client):
+        r = client.get("/results/nonexistent_match")
+        assert r.status_code == 404
+
+    def test_check_results_no_api_key_returns_503(self, client):
+        r = client.post("/results/check")
+        assert r.status_code == 503
+
+    def test_check_results_settles_pending_legs(self, client):
+        db = TestingSessionLocal()
+        make_api_key(db)
+        league = make_league(db)
+        match = make_match(db, league.id)
+        bm = make_bookmaker(db)
+        make_odds(db, match.id, bm.id)
+        bet = make_bet(db)
+        make_bet_leg(db, bet.id, match.id, bm.id, selection=Selection.home)
+        db.close()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [{
+            "id": "match_abc123",
+            "completed": True,
+            "scores": [
+                {"name": "Arsenal", "score": "2"},
+                {"name": "Chelsea", "score": "1"},
+            ]
+        }]
+
+        with patch("httpx.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client_cls.return_value.__enter__.return_value = mock_client
+            mock_client.get.return_value = mock_response
+            r = client.post("/results/check")
+
         assert r.status_code == 200
-        assert r.json()["cart_size"] == 1
-
-    def test_bet_type_inferred_correctly(self, client):
-        for match_id, expected in [("m1", "single"), ("m2", "double"), ("m3", "triple")]:
-            client.post("/cart/legs", json={
-                "match_id": match_id, "bookmaker_id": 1, "selection": "home"
-            })
-            r = client.get("/cart/")
-            assert r.json()["bet_type"] == expected
-
-    def test_cart_max_3_legs(self, client):
-        for match_id in ["m1", "m2", "m3"]:
-            client.post("/cart/legs", json={
-                "match_id": match_id, "bookmaker_id": 1, "selection": "home"
-            })
-        r = client.post("/cart/legs", json={
-            "match_id": "m4", "bookmaker_id": 1, "selection": "home"
-        })
-        assert r.status_code == 400
-        assert "full" in r.json()["detail"].lower()
-
-    def test_same_match_cannot_be_added_twice(self, client):
-        client.post("/cart/legs", json={
-            "match_id": "m1", "bookmaker_id": 1, "selection": "home"
-        })
-        r = client.post("/cart/legs", json={
-            "match_id": "m1", "bookmaker_id": 1, "selection": "away"
-        })
-        assert r.status_code == 400
-        assert "already in cart" in r.json()["detail"].lower()
-
-    def test_remove_leg_from_cart(self, client):
-        client.post("/cart/legs", json={
-            "match_id": "m1", "bookmaker_id": 1, "selection": "home"
-        })
-        r = client.delete("/cart/legs/1")
-        assert r.status_code == 200
-        assert r.json()["cart_size"] == 0
-
-    def test_empty_cart_endpoint(self, client):
-        client.post("/cart/legs", json={
-            "match_id": "m1", "bookmaker_id": 1, "selection": "home"
-        })
-        r = client.delete("/cart/")
-        assert r.status_code == 200
-        assert client.get("/cart/").json()["legs"] == []
+        assert r.json()["legs_settled"] == 1
