@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>BetTracker</title>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:     #0d0f12;
+    --bg2:    #13161b;
+    --bg3:    #1a1e26;
+    --border: #252a35;
+    --text:   #c8cdd8;
+    --text2:  #6b7385;
+    --text3:  #3d4455;
+    --accent: #00e5a0;
+    --accent2:#0099ff;
+    --warn:   #ffb020;
+    --danger: #ff4757;
+    --won:    #00e5a0;
+    --lost:   #ff4757;
+    --mono:   'IBM Plex Mono', monospace;
+    --sans:   'IBM Plex Sans', sans-serif;
+    --nav-w:  220px;
+  }
+  [data-theme="light"] {
+    --bg:     #f0f2f5;
+    --bg2:    #ffffff;
+    --bg3:    #e4e7ed;
+    --border: #d0d5df;
+    --text:   #1a1e26;
+    --text2:  #5a6070;
+    --text3:  #9aa0b0;
+    --accent: #00b87a;
+    --accent2:#0077cc;
+    --warn:   #e09000;
+    --danger: #d93a48;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; overflow: hidden; }
+  #app { display: flex; height: 100vh; }
+
+  /* ── Nav ── */
+  nav {
+    width: var(--nav-w); min-width: var(--nav-w);
+    background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden; z-index: 10;
+  }
+  .nav-logo {
+    padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; position: relative;
+  }
+  .nav-logo-icon {
+    width: 28px; height: 28px; background: var(--accent); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 11px; font-weight: 600; color: #0d0f12; flex-shrink: 0;
+  }
+  .nav-logo-text { font-weight: 600; font-size: 15px; letter-spacing: .02em; }
+  .nav-sim-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--warn);
+    position: absolute; top: 10px; right: 10px; animation: pulse 1.4s ease-in-out infinite;
+  }
+  .nav-links { flex: 1; padding: 10px 0; overflow-y: auto; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+    cursor: pointer; border-left: 2px solid transparent; transition: all .15s; white-space: nowrap;
+    color: var(--text2); font-size: 13px; font-weight: 500;
+  }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .nav-icon { width: 16px; text-align: center; font-size: 15px; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto; background: var(--danger); color: #fff; border-radius: 10px;
+    font-size: 10px; font-weight: 600; padding: 1px 6px; font-family: var(--mono);
+  }
+  .nav-footer { padding: 14px 20px; border-top: 1px solid var(--border); }
+  .nav-footer-row { display: flex; align-items: center; justify-content: space-between; }
+  .nav-balance { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 4px; }
+  .nav-balance-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+  .nav-balance-row:last-child { margin-bottom: 0; }
+  .nav-balance-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); }
+  .nav-balance-value { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .theme-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; color: var(--text2); cursor: pointer; font-size: 12px; transition: all .15s; }
+  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Sim banner ── */
+  .sim-banner {
+    background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--warn) 12%, transparent) 0px, color-mix(in srgb, var(--warn) 12%, transparent) 10px, transparent 10px, transparent 20px);
+    border-bottom: 1px solid var(--warn); padding: 8px 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sim-banner-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex-shrink: 0; animation: pulse 1.4s ease-in-out infinite; }
+  .sim-banner-text { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--warn); text-transform: uppercase; letter-spacing: .1em; }
+  .sim-banner-sub { font-family: var(--mono); font-size: 10px; color: color-mix(in srgb, var(--warn) 60%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Main ── */
+  main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .page { flex: 1; overflow-y: auto; padding: 24px; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .page-title { font-size: 18px; font-weight: 600; }
+  .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── Cards / Tables ── */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+  .card-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text2); }
+  .card-body { padding: 16px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 8px 12px; font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; white-space: nowrap; font-family: var(--sans); }
+  .btn-primary { background: var(--accent); color: #0d0f12; }
+  .btn-primary:hover { opacity: .88; }
+  .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
+  .btn-danger:hover { background: color-mix(in srgb, var(--danger) 25%, transparent); }
+  .btn-warn { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+  .btn-warn:hover { background: color-mix(in srgb, var(--warn) 25%, transparent); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── Badges ── */
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 5px; font-family: var(--mono); font-size: 11px; font-weight: 500; }
+  .badge-green { background: color-mix(in srgb, var(--won) 15%, transparent); color: var(--won); }
+  .badge-red { background: color-mix(in srgb, var(--lost) 15%, transparent); color: var(--lost); }
+  .badge-warn { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+  .badge-blue { background: color-mix(in srgb, var(--accent2) 15%, transparent); color: var(--accent2); }
+  .badge-muted { background: var(--bg3); color: var(--text2); }
+
+  /* ── Inputs ── */
+  input, select, textarea {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 7px;
+    color: var(--text); padding: 8px 12px; font-size: 13px; font-family: var(--sans);
+    transition: border-color .15s; outline: none; width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+  .form-group { margin-bottom: 14px; }
+
+  /* ── Mono values ── */
+  .mono { font-family: var(--mono); }
+  .val-green { color: var(--won); font-family: var(--mono); }
+  .val-red { color: var(--lost); font-family: var(--mono); }
+  .val-warn { color: var(--warn); font-family: var(--mono); }
+  .val-blue { color: var(--accent2); font-family: var(--mono); }
+
+  /* ── Odds chip ── */
+  .odds-chip {
+    display: inline-block; padding: 3px 8px; border-radius: 5px; font-family: var(--mono); font-size: 12px;
+    background: var(--bg3); border: 1px solid var(--border); cursor: pointer; transition: all .15s;
+  }
+  .odds-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .odds-chip.in-cart { background: color-mix(in srgb, var(--accent) 15%, transparent); border-color: var(--accent); color: var(--accent); }
+  .odds-chip.best { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+  .bm-preferred td { background: color-mix(in srgb, var(--accent2) 5%, transparent) !important; }
+
+  /* ── Summary stats ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 4px; }
+  .stat-value { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+  .stat-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* ── Modal ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 640px; max-height: 85vh; display: flex; flex-direction: column; }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 4px; }
+  .modal-close:hover { color: var(--text); background: var(--bg3); }
+  .modal-body { padding: 20px; overflow-y: auto; }
+  .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* ── Toast ── */
+  .toast-stack { position: fixed; bottom: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+  .toast { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-size: 13px; max-width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,.4); animation: slideIn .2s ease; }
+  .toast.success { border-left: 3px solid var(--won); }
+  .toast.error { border-left: 3px solid var(--danger); }
+  .toast.warn { border-left: 3px solid var(--warn); }
+  @keyframes slideIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
+
+  /* ── Import page ── */
+  .import-step { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 14px; }
+  .import-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #0d0f12; font-size: 11px; font-weight: 700; margin-right: 8px; }
+  .import-step-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; }
+  .terminal {
+    background: #0a0c0f;
+    border: 1px solid #1e2530;
+    border-radius: 10px;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  }
+  .terminal-bar {
+    background: #141720;
+    border-bottom: 1px solid #1e2530;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .terminal-dots { display: flex; gap: 6px; }
+  .terminal-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .terminal-dot.red    { background: #ff5f57; }
+  .terminal-dot.yellow { background: #febc2e; }
+  .terminal-dot.green  { background: #28c840; }
+  .terminal-title { font-size: 11px; color: #4a5568; margin: 0 auto; letter-spacing: .05em; }
+  .terminal-body {
+    padding: 14px 16px;
+    min-height: 80px;
+    max-height: 340px;
+    overflow-y: auto;
+    line-height: 1.7;
+    scroll-behavior: smooth;
+  }
+  .terminal-body::-webkit-scrollbar { width: 4px; }
+  .terminal-body::-webkit-scrollbar-track { background: transparent; }
+  .terminal-body::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 2px; }
+  .terminal-line { display: flex; gap: 8px; }
+  .terminal-line .prompt { color: #2a3a50; user-select: none; flex-shrink: 0; }
+  .terminal-line.ok   .msg { color: #00e5a0; }
+  .terminal-line.err  .msg { color: #ff4757; }
+  .terminal-line.warn .msg { color: #ffb020; }
+  .terminal-line.info .msg { color: #5a7090; }
+  .terminal-line.head .msg { color: #c8cdd8; font-weight: 600; }
+  .terminal-cursor {
+    display: inline-block; width: 7px; height: 13px;
+    background: var(--accent); vertical-align: middle;
+    animation: blink .9s step-end infinite; margin-left: 2px;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  /* reuse import-log-line class for column ref box */
+  .import-log { background: #0a0c0f; border: 1px solid #1e2530; border-radius: 7px; padding: 12px 14px; font-family: var(--mono); font-size: 12px; max-height: none; overflow-y: auto; }
+  .import-log-line { padding: 2px 0; color: #5a7090; }
+  .import-log-line.ok { color: var(--won); }
+  .import-log-line.err { color: var(--danger); }
+  .import-log-line.info { color: #5a7090; }
+  .import-log-line.warn { color: var(--warn); }
+
+  /* ── Misc ── */
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--text2); }
+  .empty-state-icon { font-size: 36px; margin-bottom: 10px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  [x-cloak] { display: none !important; }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .wrap { flex-wrap: wrap; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+  .scrollable-x { overflow-x: auto; }
+
+  @media (max-width: 768px) {
+    nav { width: 56px; min-width: 56px; }
+    .nav-logo-text, .nav-item span:not(.nav-icon), .nav-badge, .nav-footer { display: none; }
+    .nav-item { padding: 12px; justify-content: center; }
+    .nav-balance { display: none; }
+    .page { padding: 16px; }
+  }
+</style>
+</head>
+<body x-data="bettracker()" x-init="init()" :data-theme="settings.theme">
+
+<div id="app">
+
+  <!-- ── Nav ── -->
+  <nav>
+    <div class="nav-logo">
+      <div class="nav-logo-icon">BT</div>
+      <span class="nav-logo-text">BetTracker</span>
+      <span class="nav-sim-dot" x-show="simMode" x-cloak></span>
+    </div>
+
+    <div class="nav-links">
+      <div class="nav-item" :class="{active: page==='odds'}" @click="nav('odds')">
+        <span class="nav-icon">📊</span><span>Odds</span>
+      </div>
+      <div class="nav-item" :class="{active: page==='matches'}" @click="nav('matches')">
+        <span class="nav-icon">⚽</span><span>Matches</span>
+      </div>
+      <div class="nav-item" :class="{active: page==='arbitrage'}" @click="nav('arbitrage')">
+        <span class="nav-icon">⚡</span><span>Arbitrage</span>
+      </div>
+      <div class="nav-item" :class="{active: page==='cart'}" @click="nav('cart')">
+        <span class="nav-icon">🛒</span><span>Cart</span>
+        <span class="nav-badge" x-show="cart.legs && cart.legs.length" x-text="cart.legs && cart.legs.length" x-cloak></span>
+      </div>
+      <div class="nav-item" :class="{active: page==='bets'}" @click="nav('bets')">
+        <span class="nav-icon">🎯</span><span>Open Bets</span>
+      </div>
+      <div class="nav-item" :class="{active: page==='history'}" @click="nav('history')">
+        <span class="nav-icon">📈</span><span>History & P&L</span>
+      </div>
+      <div class="nav-item" :class="{active: page==='import'}" @click="nav('import')">
+        <span class="nav-icon">📥</span><span>Import Sheets</span>
+      </div>
+      <div class="nav-item" :class="{active: page==='notifications'}" @click="nav('notifications')">
+        <span class="nav-icon">🔔</span><span>Notifications</span>
+        <span class="nav-badge" x-show="unreadCount > 0" x-text="unreadCount" x-cloak></span>
+      </div>
+      <div class="nav-item" :class="{active: page==='settings'}" @click="nav('settings')">
+        <span class="nav-icon">⚙️</span><span>Settings</span>
+      </div>
+    </div>
+
+    <div class="nav-footer">
+      <!-- Balance widget -->
+      <div class="nav-balance" x-show="true" x-cloak>
+        <div class="nav-balance-row">
+          <span class="nav-balance-label">On Hand</span>
+          <span class="nav-balance-value val-blue" x-text="onHand.toFixed(2)"></span>
+        </div>
+        <div class="nav-balance-row">
+          <span class="nav-balance-label">Pending</span>
+          <span class="nav-balance-value val-warn" x-text="pendingStake.toFixed(2)"></span>
+        </div>
+        <div class="nav-balance-row">
+          <span class="nav-balance-label">P&L</span>
+          <span class="nav-balance-value"
+            :class="(summary.profit||0) >= 0 ? 'val-green' : 'val-red'"
+            x-text="((summary.profit||0) >= 0 ? '+' : '') + (summary.profit||0).toFixed(2)"></span>
+        </div>
+      </div>
+      <div class="nav-footer-row" style="margin-top:8px">
+        <button class="theme-btn" @click="toggleTheme()">
+          <span x-text="settings.theme === 'dark' ? '☀️ Light' : '🌙 Dark'"></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main>
+    <!-- Sim banner -->
+    <div class="sim-banner" x-show="simMode" x-cloak>
+      <div class="sim-banner-dot"></div>
+      <span class="sim-banner-text">Simulated Data</span>
+      <span class="sim-banner-sub">Cannot reach <span x-text="settings.apiUrl"></span></span>
+    </div>
+
+    <!-- ══════ ODDS ══════ -->
+    <div class="page" x-show="page==='odds'">
+      <div class="page-header">
+        <div class="page-title">Odds</div>
+        <div class="page-actions">
+          <select x-model="oddsFilter.status" style="width:auto" @change="loadOdds()">
+            <option value="upcoming">Upcoming</option>
+            <option value="live">Live</option>
+            <option value="finished">Finished</option>
+            <option value="">All</option>
+          </select>
+          <button class="btn btn-secondary" @click="loadOdds()">↻ Refresh</button>
+          <button class="btn btn-primary" @click="fetchOdds()" :disabled="fetchingOdds">
+            <span x-show="fetchingOdds" class="spin">⟳</span>
+            <span>Fetch Odds</span>
+          </button>
+        </div>
+      </div>
+
+      <div x-show="!oddsByMatch.length" class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <div>No odds yet — click Fetch Odds to pull from the API</div>
+      </div>
+
+      <template x-for="group in oddsByMatch" :key="group.match_id">
+        <div class="card mb-16">
+          <div class="card-header">
+            <div>
+              <span class="mono" style="font-size:13px;font-weight:600" x-text="group.home_team + ' vs ' + group.away_team"></span>
+              <span class="badge badge-muted" style="margin-left:8px;font-size:10px" x-text="group.league"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="mono" style="font-size:11px;color:var(--text2)" x-text="formatDateTime(group.kick_off)"></span>
+              <button class="btn btn-secondary btn-sm" @click="openOddsModal(group)">Details</button>
+            </div>
+          </div>
+          <div class="scrollable-x">
+            <table>
+              <thead>
+                <tr>
+                  <th>Bookmaker</th>
+                  <th class="text-right">1 (Home)</th>
+                  <th class="text-right">X (Draw)</th>
+                  <th class="text-right">2 (Away)</th>
+                  <th class="text-right">Fetched</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in group.odds" :key="row.id">
+                  <tr :class="row.bookmaker.name === settings.preferredBookmaker ? 'bm-preferred' : ''">
+                    <td>
+                      <span x-text="row.bookmaker.name"></span>
+                      <span x-show="row.bookmaker.name === settings.preferredBookmaker" style="font-size:10px;color:var(--accent2);margin-left:6px">★</span>
+                    </td>
+                    <td class="text-right">
+                      <span class="odds-chip" :class="{best: row.home === group.bestHome, 'in-cart': isInCart(group.match_id)}"
+                        @click="toggleCart(group, row.bookmaker.id, 'home')" x-text="row.home.toFixed(2)"></span>
+                    </td>
+                    <td class="text-right">
+                      <span class="odds-chip" :class="{best: row.draw === group.bestDraw, 'in-cart': isInCart(group.match_id)}"
+                        @click="toggleCart(group, row.bookmaker.id, 'draw')" x-text="row.draw.toFixed(2)"></span>
+                    </td>
+                    <td class="text-right">
+                      <span class="odds-chip" :class="{best: row.away === group.bestAway, 'in-cart': isInCart(group.match_id)}"
+                        @click="toggleCart(group, row.bookmaker.id, 'away')" x-text="row.away.toFixed(2)"></span>
+                    </td>
+                    <td class="text-right mono" style="font-size:11px;color:var(--text2)" x-text="formatTime(row.fetched_at)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ══════ MATCHES ══════ -->
+    <div class="page" x-show="page==='matches'">
+      <div class="page-header">
+        <div class="page-title">Matches</div>
+        <div class="page-actions">
+          <select x-model="matchFilter" style="width:auto" @change="loadMatches()">
+            <option value="upcoming">Upcoming</option>
+            <option value="live">Live</option>
+            <option value="finished">Finished</option>
+            <option value="">All</option>
+          </select>
+          <button class="btn btn-secondary" @click="loadMatches()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div x-show="!matches.length" class="empty-state">
+        <div class="empty-state-icon">⚽</div>
+        <div>No matches found</div>
+      </div>
+
+      <template x-for="league in matchesByLeague" :key="league.name">
+        <div class="card mb-16">
+          <div class="card-header">
+            <span class="card-title" x-text="league.name"></span>
+            <span class="badge badge-muted" x-text="league.matches.length + ' matches'"></span>
+          </div>
+          <div class="scrollable-x">
+            <table>
+              <thead>
+                <tr><th>Home</th><th>Away</th><th>Kick-off</th><th>Status</th><th>Result</th></tr>
+              </thead>
+              <tbody>
+                <template x-for="m in league.matches" :key="m.id">
+                  <tr>
+                    <td x-text="m.home_team"></td>
+                    <td x-text="m.away_team"></td>
+                    <td class="mono" style="font-size:12px" x-text="formatDateTime(m.kick_off)"></td>
+                    <td>
+                      <span class="badge" :class="{
+                        'badge-green': m.status==='finished',
+                        'badge-warn':  m.status==='live',
+                        'badge-muted': m.status==='upcoming',
+                        'badge-red':   m.status==='cancelled'
+                      }" x-text="m.status"></span>
+                    </td>
+                    <td>
+                      <span x-show="m.status==='finished'" class="mono" style="font-size:12px"
+                        x-text="(m.home_goals ?? '?') + ' – ' + (m.away_goals ?? '?')"></span>
+                      <span x-show="m.status!=='finished'" class="mono" style="color:var(--text3)">—</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ══════ ARBITRAGE ══════ -->
+    <div class="page" x-show="page==='arbitrage'">
+      <div class="page-header">
+        <div class="page-title">Arbitrage</div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" :class="{active: arbView==='live'}" @click="arbView='live'">Live</button>
+          <button class="btn btn-secondary" :class="{active: arbView==='history'}" @click="arbView='history'; loadArbHistory()">History</button>
+          <button class="btn btn-secondary" @click="loadArbitrage()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div x-show="arbView==='live'">
+        <div x-show="!arbitrage.length" class="empty-state">
+          <div class="empty-state-icon">⚡</div>
+          <div>No live arbitrage opportunities</div>
+        </div>
+        <template x-for="arb in arbitrage" :key="arb.id">
+          <div class="card mb-16">
+            <div class="card-header">
+              <div>
+                <span class="mono" style="font-size:13px;font-weight:600" x-text="arb.match.home_team + ' vs ' + arb.match.away_team"></span>
+              </div>
+              <span class="badge badge-green mono" x-text="'+' + arb.margin_percent.toFixed(2) + '%'"></span>
+            </div>
+            <div class="card-body">
+              <div class="grid-3 mb-8">
+                <div class="stat-card">
+                  <div class="stat-label">Home (1) — <span x-text="arb.home_bookmaker?.name"></span></div>
+                  <div class="stat-value val-green" x-text="arb.home_odds.toFixed(2)"></div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Draw (X) — <span x-text="arb.draw_bookmaker?.name"></span></div>
+                  <div class="stat-value val-green" x-text="arb.draw_odds.toFixed(2)"></div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Away (2) — <span x-text="arb.away_bookmaker?.name"></span></div>
+                  <div class="stat-value val-green" x-text="arb.away_odds.toFixed(2)"></div>
+                </div>
+              </div>
+              <div class="flex gap-8 items-center wrap">
+                <input type="number" x-model="arb._stake" placeholder="Stake" style="width:120px" min="1"
+                  :style="arb._stake > onHand ? 'border-color:var(--danger)' : ''">
+                <button class="btn btn-primary" @click="placeArbBet(arb)" :disabled="!arb._stake || arb._stake > onHand">Place Arb Bet</button>
+                <span class="mono" style="font-size:12px;color:var(--text2)" x-show="arb._stake && arb._stake <= onHand"
+                  x-text="'Guaranteed return: ' + (arb._stake / ((1/arb.home_odds)+(1/arb.draw_odds)+(1/arb.away_odds))).toFixed(2)"></span>
+                <span x-show="arb._stake > onHand" style="color:var(--danger);font-size:12px">✕ Exceeds on-hand balance</span>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div x-show="arbView==='history'">
+        <div x-show="!arbHistory.length" class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          <div>No arbitrage history</div>
+        </div>
+        <div class="card">
+          <div class="scrollable-x">
+            <table>
+              <thead><tr><th>Match</th><th>Home</th><th>Draw</th><th>Away</th><th class="text-right">Margin</th><th>Detected</th></tr></thead>
+              <tbody>
+                <template x-for="arb in arbHistory" :key="arb.id">
+                  <tr>
+                    <td class="mono" style="font-size:12px" x-text="arb.match.home_team + ' v ' + arb.match.away_team"></td>
+                    <td class="mono" x-text="arb.home_odds.toFixed(2)"></td>
+                    <td class="mono" x-text="arb.draw_odds.toFixed(2)"></td>
+                    <td class="mono" x-text="arb.away_odds.toFixed(2)"></td>
+                    <td class="text-right val-green" x-text="'+' + arb.margin_percent.toFixed(2) + '%'"></td>
+                    <td class="mono" style="font-size:11px;color:var(--text2)" x-text="formatDateTime(arb.detected_at)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ CART ══════ -->
+    <div class="page" x-show="page==='cart'">
+      <div class="page-header">
+        <div class="page-title">Cart
+          <span x-show="cart.bet_type && cart.bet_type !== 'empty'" class="badge badge-blue" style="margin-left:8px;font-size:12px;text-transform:capitalize" x-text="cart.bet_type"></span>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-danger btn-sm" @click="emptyCart()" x-show="cart.legs && cart.legs.length">Clear Cart</button>
+        </div>
+      </div>
+
+      <div x-show="!cart.legs || !cart.legs.length" class="empty-state">
+        <div class="empty-state-icon">🛒</div>
+        <div>Cart is empty — click an odds chip to add a selection</div>
+      </div>
+
+      <div x-show="cart.legs && cart.legs.length">
+        <div class="card mb-16">
+          <div class="scrollable-x">
+            <table>
+              <thead><tr><th>#</th><th>Match</th><th>Selection</th><th class="text-right">Odds</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="leg in cart.legs" :key="leg.id">
+                  <tr>
+                    <td class="mono" style="color:var(--text2)" x-text="leg.id"></td>
+                    <td x-text="getCartLegLabel(leg)"></td>
+                    <td><span class="badge badge-blue" x-text="leg.selection.toUpperCase()"></span></td>
+                    <td class="text-right mono" x-text="getCartLegOdds(leg)"></td>
+                    <td class="text-right">
+                      <button class="btn btn-danger btn-sm" @click="removeFromCart(leg.id)">✕</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div class="form-group">
+              <label>Stake <span style="color:var(--text2);font-weight:400">(on hand: <span class="val-blue mono" x-text="onHand.toFixed(2)"></span>)</span></label>
+              <input type="number" x-model="betStake" placeholder="0.00" min="0.01" step="0.01" style="max-width:200px"
+                :style="betStake > onHand ? 'border-color:var(--danger)' : ''">
+              <div x-show="betStake > onHand" style="color:var(--danger);font-size:12px;margin-top:4px">
+                ✕ Stake exceeds your on-hand balance
+              </div>
+            </div>
+            <button class="btn btn-primary" @click="placeBet()" :disabled="!betStake || betStake <= 0 || betStake > onHand">
+              Place <span style="text-transform:capitalize" x-text="cart.bet_type"></span> Bet
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ OPEN BETS ══════ -->
+    <div class="page" x-show="page==='bets'">
+      <div class="page-header">
+        <div class="page-title">Open Bets</div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" @click="loadBets()">↻ Refresh</button>
+          <button class="btn btn-warn" @click="checkResults()">Check Results</button>
+        </div>
+      </div>
+
+      <div x-show="!openBets.length" class="empty-state">
+        <div class="empty-state-icon">🎯</div>
+        <div>No open bets</div>
+      </div>
+
+      <template x-for="bet in openBets" :key="bet.id">
+        <div class="card mb-16">
+          <div class="card-header">
+            <div class="flex gap-8 items-center">
+              <span class="badge badge-muted mono" style="text-transform:capitalize" x-text="bet.type"></span>
+              <span class="mono" style="font-size:13px">Stake: <span class="val-blue" x-text="bet.stake.toFixed(2)"></span></span>
+              <span class="mono" style="font-size:13px">→ <span class="val-green" x-text="bet.potential_return.toFixed(2)"></span></span>
+            </div>
+            <span class="mono" style="font-size:11px;color:var(--text2)" x-text="formatDateTime(bet.placed_at)"></span>
+          </div>
+          <div class="scrollable-x">
+            <table>
+              <thead><tr><th>Match</th><th>Selection</th><th class="text-right">Odds</th><th>Status</th></tr></thead>
+              <tbody>
+                <template x-for="leg in bet.legs" :key="leg.id">
+                  <tr>
+                    <td class="mono" style="font-size:12px" x-text="leg.match.home_team + ' v ' + leg.match.away_team"></td>
+                    <td><span class="badge badge-blue" x-text="leg.selection.toUpperCase()"></span></td>
+                    <td class="text-right mono" x-text="leg.odds.toFixed(2)"></td>
+                    <td>
+                      <span class="badge badge-warn">Pending</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ══════ HISTORY & P&L ══════ -->
+    <div class="page" x-show="page==='history'">
+      <div class="page-header">
+        <div class="page-title">History & P&L</div>
+        <button class="btn btn-secondary" @click="loadHistory()">↻ Refresh</button>
+      </div>
+
+      <div class="stats-grid" x-show="summary.bets > 0 || summary.open_bets > 0">
+        <div class="stat-card">
+          <div class="stat-label">Total Bets</div>
+          <div class="stat-value mono" x-text="summary.bets"></div>
+          <div class="stat-sub" x-text="summary.open_bets + ' pending'"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value mono" :class="summary.win_rate_percent >= 50 ? 'val-green' : 'val-red'"
+            x-text="(summary.win_rate_percent || 0).toFixed(1) + '%'"></div>
+          <div class="stat-sub" x-text="summary.won + 'W / ' + summary.lost + 'L'"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Staked</div>
+          <div class="stat-value mono" x-text="(summary.staked || 0).toFixed(2)"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Profit / Loss</div>
+          <div class="stat-value" :class="(summary.profit||0) >= 0 ? 'val-green' : 'val-red'"
+            x-text="((summary.profit||0) >= 0 ? '+' : '') + (summary.profit||0).toFixed(2)"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">ROI</div>
+          <div class="stat-value" :class="(summary.roi_percent||0) >= 0 ? 'val-green' : 'val-red'"
+            x-text="((summary.roi_percent||0) >= 0 ? '+' : '') + (summary.roi_percent||0).toFixed(2) + '%'"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Returned</div>
+          <div class="stat-value mono" x-text="(summary.returned || 0).toFixed(2)"></div>
+        </div>
+      </div>
+
+      <div x-show="summary.bets === 0 && summary.open_bets === 0" class="empty-state">
+        <div class="empty-state-icon">📈</div>
+        <div>No settled bets yet</div>
+      </div>
+
+      <!-- By type breakdown -->
+      <div x-show="Object.keys(summary.by_type || {}).length" class="card mb-16">
+        <div class="card-header"><span class="card-title">By Bet Type</span></div>
+        <div class="scrollable-x">
+          <table>
+            <thead><tr><th>Type</th><th>Bets</th><th>Won</th><th class="text-right">Staked</th><th class="text-right">Profit</th><th class="text-right">ROI</th></tr></thead>
+            <tbody>
+              <template x-for="[type, s] in Object.entries(summary.by_type || {})" :key="type">
+                <tr>
+                  <td class="mono" style="text-transform:capitalize" x-text="type"></td>
+                  <td class="mono" x-text="s.bets"></td>
+                  <td class="mono" x-text="s.won + '/' + s.bets"></td>
+                  <td class="text-right mono" x-text="s.staked.toFixed(2)"></td>
+                  <td class="text-right" :class="s.profit >= 0 ? 'val-green' : 'val-red'" x-text="(s.profit >= 0 ? '+' : '') + s.profit.toFixed(2)"></td>
+                  <td class="text-right" :class="s.roi_percent >= 0 ? 'val-green' : 'val-red'" x-text="(s.roi_percent >= 0 ? '+' : '') + s.roi_percent.toFixed(2) + '%'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Full settled bets list -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">All Settled Bets</span></div>
+        <div class="scrollable-x">
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th>Stake</th><th>Return</th><th>P&L</th><th>Status</th></tr></thead>
+            <tbody>
+              <template x-for="bet in settledBets" :key="bet.id">
+                <tr>
+                  <td class="mono" style="font-size:11px;color:var(--text2)" x-text="formatDateTime(bet.placed_at)"></td>
+                  <td class="mono" style="text-transform:capitalize" x-text="bet.type"></td>
+                  <td class="mono" x-text="bet.stake.toFixed(2)"></td>
+                  <td class="mono" x-text="(bet.actual_return||0).toFixed(2)"></td>
+                  <td :class="(bet.actual_return||0)-bet.stake >= 0 ? 'val-green' : 'val-red'" class="mono"
+                    x-text="((bet.actual_return||0)-bet.stake >= 0 ? '+' : '') + ((bet.actual_return||0)-bet.stake).toFixed(2)"></td>
+                  <td>
+                    <span class="badge" :class="bet.status==='won' ? 'badge-green' : bet.status==='lost' ? 'badge-red' : 'badge-muted'"
+                      x-text="bet.status"></span>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="!settledBets.length">
+                <td colspan="6" style="text-align:center;color:var(--text2);padding:24px">No settled bets</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ IMPORT SHEETS ══════ -->
+    <div class="page" x-show="page==='import'">
+      <div class="page-header">
+        <div class="page-title">Import from Google Sheets</div>
+      </div>
+
+      <!-- Step 1: Export instructions -->
+      <div class="import-step">
+        <div class="import-step-title">
+          <span class="import-step-num">1</span> Export your Google Sheet as CSV
+        </div>
+        <p style="color:var(--text2);font-size:13px;line-height:1.7">
+          In Google Sheets, open each tab (Matches, Bets) and go to
+          <strong>File → Download → Comma Separated Values (.csv)</strong>.
+          Save the two files, then upload them below.
+        </p>
+      </div>
+
+      <!-- Step 2: File uploads -->
+      <div class="import-step">
+        <div class="import-step-title">
+          <span class="import-step-num">2</span> Upload CSV Files
+        </div>
+        <div class="form-group">
+          <label>Matches CSV</label>
+          <input type="file" accept=".csv,text/csv" @change="onFileChange($event, 'matches')" style="cursor:pointer">
+          <div x-show="importFiles.matchesName" style="font-size:12px;color:var(--accent);margin-top:4px" x-text="'✓ ' + importFiles.matchesName"></div>
+        </div>
+        <div class="form-group">
+          <label>Bets CSV</label>
+          <input type="file" accept=".csv,text/csv" @change="onFileChange($event, 'bets')" style="cursor:pointer">
+          <div x-show="importFiles.betsName" style="font-size:12px;color:var(--accent);margin-top:4px" x-text="'✓ ' + importFiles.betsName"></div>
+        </div>
+      </div>
+
+      <!-- Step 3: Import -->
+      <div class="import-step">
+        <div class="import-step-title">
+          <span class="import-step-num">3</span> Run Import
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn btn-primary" @click="runImport()"
+            :disabled="importing || (!importFiles.matchesText && !importFiles.betsText)">
+            <span x-show="importing" class="spin">⟳</span>
+            <span x-text="importing ? 'Importing…' : 'Import Now'"></span>
+          </button>
+          <button class="btn btn-secondary" @click="importLog = []">Clear</button>
+        </div>
+
+        <!-- Terminal -->
+        <div class="terminal" x-show="importLog.length || importing">
+          <div class="terminal-bar">
+            <div class="terminal-dots">
+              <div class="terminal-dot red"></div>
+              <div class="terminal-dot yellow"></div>
+              <div class="terminal-dot green"></div>
+            </div>
+            <span class="terminal-title">bettracker — import</span>
+          </div>
+          <div class="terminal-body" id="terminal-body">
+            <template x-for="(line, i) in importLog" :key="i">
+              <div class="terminal-line" :class="line.type">
+                <span class="prompt" x-text="line.type === 'head' ? '===' : line.type === 'ok' ? '  ✓' : line.type === 'err' ? '  ✗' : line.type === 'warn' ? '  !' : '  ›'"></span>
+                <span class="msg" x-text="line.msg"></span>
+              </div>
+            </template>
+            <span class="terminal-cursor" x-show="importing"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column mapping reference -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Expected Column Format</span></div>
+        <div class="card-body">
+          <p style="color:var(--text2);font-size:12px;margin-bottom:12px">Your sheet must have these exact column headers (case-insensitive):</p>
+          <div class="grid-2">
+            <div>
+              <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:var(--text2)">MATCHES TAB</div>
+              <div class="import-log" style="max-height:none">
+                <div class="import-log-line info">Match Number</div>
+                <div class="import-log-line info">Match ID</div>
+                <div class="import-log-line info">League</div>
+                <div class="import-log-line info">League key</div>
+                <div class="import-log-line info">Home Team</div>
+                <div class="import-log-line info">Away Team</div>
+                <div class="import-log-line info">Match Date</div>
+                <div class="import-log-line info">1 (home odds)</div>
+                <div class="import-log-line info">x (draw odds)</div>
+                <div class="import-log-line info">2 (away odds)</div>
+                <div class="import-log-line info">Home goals</div>
+                <div class="import-log-line info">Away goals</div>
+                <div class="import-log-line info">Country</div>
+              </div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:var(--text2)">BETS TAB</div>
+              <div class="import-log" style="max-height:none">
+                <div class="import-log-line info">Bet Date</div>
+                <div class="import-log-line info">Bet type (Single/Double/Triple/Arbitrage)</div>
+                <div class="import-log-line info">Stake (e.g. "kr 300.00")</div>
+                <div class="import-log-line info">Matches (comma-sep match numbers e.g. "1,2")</div>
+                <div class="import-log-line info">Selection (comma-sep: 1=home, x=draw, 2=away)</div>
+                <div class="import-log-line info">Total odds</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ NOTIFICATIONS ══════ -->
+    <div class="page" x-show="page==='notifications'">
+      <div class="page-header">
+        <div class="page-title">Notifications</div>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" @click="clearReadNotifications()">Clear Read</button>
+          <button class="btn btn-secondary" @click="loadNotifications()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div x-show="!notifications.length" class="empty-state">
+        <div class="empty-state-icon">🔔</div>
+        <div>No unread notifications</div>
+      </div>
+
+      <template x-for="n in notifications" :key="n.id">
+        <div class="card mb-16" style="border-left: 3px solid" :style="n.type==='arbitrage' ? 'border-left-color:var(--won)' : n.type==='api_key_low' ? 'border-left-color:var(--warn)' : 'border-left-color:var(--accent2)'">
+          <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-size:13px" x-text="n.message"></div>
+              <div style="font-size:11px;color:var(--text2);margin-top:3px" x-text="formatDateTime(n.created_at)"></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" @click="markRead(n.id)">Mark Read</button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ══════ SETTINGS ══════ -->
+    <div class="page" x-show="page==='settings'">
+      <div class="page-header">
+        <div class="page-title">Settings</div>
+        <button class="btn btn-primary" @click="saveSettings()">Save</button>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-header"><span class="card-title">Connection</span></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>API Base URL</label>
+            <input type="url" x-model="settings.apiUrl" placeholder="http://192.168.86.100:8000">
+          </div>
+          <button class="btn btn-secondary" @click="testConnection()">Test Connection</button>
+          <span x-show="connStatus" class="mono" style="margin-left:10px;font-size:12px"
+            :style="connStatus === 'OK' ? 'color:var(--won)' : 'color:var(--danger)'"
+            x-text="connStatus"></span>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-header"><span class="card-title">Display</span></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>Starting Bankroll</label>
+            <input type="number" x-model="settings.bankroll" min="0" step="100" style="max-width:200px" placeholder="1000">
+          </div>
+          <div class="form-group">
+            <label>Theme</label>
+            <select x-model="settings.theme" style="max-width:200px">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Preferred Bookmaker</label>
+            <input type="text" x-model="settings.preferredBookmaker" placeholder="e.g. Unibet" style="max-width:200px">
+          </div>
+          <div class="form-group">
+            <label>Auto-refresh Interval (seconds, 0 = off)</label>
+            <input type="number" x-model="settings.refreshInterval" min="0" step="10" style="max-width:200px"
+              @change="restartAutoRefresh()">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Import</span></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text2)">Upload CSV files directly on the <strong>Import Sheets</strong> page.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════ ODDS DETAIL MODAL ══════ -->
+<div class="modal-overlay" x-show="oddsModal.open" x-cloak @click.self="oddsModal.open=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="oddsModal.match ? oddsModal.match.home_team + ' vs ' + oddsModal.match.away_team : ''"></div>
+      <button class="modal-close" @click="oddsModal.open=false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="scrollable-x">
+        <table>
+          <thead><tr><th>Bookmaker</th><th class="text-right">1</th><th class="text-right">X</th><th class="text-right">2</th></tr></thead>
+          <tbody>
+            <template x-for="row in (oddsModal.match ? oddsModal.match.odds : [])" :key="row.id">
+              <tr :class="row.bookmaker.name === settings.preferredBookmaker ? 'bm-preferred' : ''">
+                <td x-text="row.bookmaker.name"></td>
+                <td class="text-right mono" :class="row.home === oddsModal.bestHome ? 'val-green' : ''" x-text="row.home.toFixed(2)"></td>
+                <td class="text-right mono" :class="row.draw === oddsModal.bestDraw ? 'val-green' : ''" x-text="row.draw.toFixed(2)"></td>
+                <td class="text-right mono" :class="row.away === oddsModal.bestAway ? 'val-green' : ''" x-text="row.away.toFixed(2)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TOASTS ══════ -->
+<div class="toast-stack">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="toast" :class="t.type" x-text="t.msg"></div>
+  </template>
+</div>
+
+<script>
+function bettracker() {
+  return {
+    page: 'odds',
+    simMode: false,
+    toasts: [],
+    unreadCount: 0,
+    _refreshTimer: null,
+
+    // Data
+    matches: [],
+    matchFilter: 'upcoming',
+    odds: [],
+    oddsFilter: { status: 'upcoming' },
+    arbitrage: [],
+    arbHistory: [],
+    arbView: 'live',
+    cart: { legs: [], bet_type: 'empty' },
+    betStake: '',
+    openBets: [],
+    settledBets: [],
+    summary: { bets:0, won:0, lost:0, staked:0, returned:0, profit:0, roi_percent:0, win_rate_percent:0, open_bets:0, by_type:{}, by_league:{}, by_bookmaker:{} },
+    notifications: [],
+    fetchingOdds: false,
+    connStatus: '',
+
+    // Import
+    importFiles: { matchesText: '', matchesName: '', betsText: '', betsName: '' },
+    importing: false,
+    importLog: [],
+
+    // Modal
+    oddsModal: { open: false, match: null, bestHome: 0, bestDraw: 0, bestAway: 0 },
+
+    settings: {
+      apiUrl: 'http://192.168.86.100:8000',
+      theme: 'dark',
+      preferredBookmaker: 'Unibet',
+      refreshInterval: '0',
+      bankroll: 1000,
+    },
+
+    // ─── Init ───
+    init() {
+      this.loadSettings();
+      this.nav('odds');
+      this.loadNotifications();
+      this.loadBets();    // needed for pendingStake in nav widget
+      this.loadSummary(); // needed for P&L in nav widget
+      this.restartAutoRefresh();
+    },
+
+    nav(p) {
+      this.page = p;
+      if (p === 'odds')          this.loadOdds();
+      if (p === 'matches')       this.loadMatches();
+      if (p === 'arbitrage')     this.loadArbitrage();
+      if (p === 'cart')          this.loadCart();
+      if (p === 'bets')          this.loadBets();
+      if (p === 'history')       this.loadHistory();
+      if (p === 'notifications') this.loadNotifications();
+    },
+
+    // ─── API ───
+    async api(path, opts = {}) {
+      const base = this.settings.apiUrl.replace(/\/$/, '');
+      try {
+        const r = await fetch(base + path, {
+          headers: { 'Content-Type': 'application/json' },
+          ...opts
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ detail: r.statusText }));
+          throw new Error(err.detail || r.statusText);
+        }
+        return await r.json();
+      } catch (e) {
+        if (e.name === 'TypeError') { // network failure
+          this.simMode = true;
+          return null; // caller handles null → sim data
+        }
+        this.simMode = false;
+        throw e;
+      }
+    },
+
+    // ─── Odds ───
+    async loadOdds() {
+      // Always load matches too so oddsByMatch can join team names
+      const [raw, matchRaw] = await Promise.all([
+        this.api('/odds/'),
+        this.matches.length ? Promise.resolve(null) : this.api('/matches/')
+      ]);
+      if (raw === null) { this.odds = SIM_DATA.odds; this.simMode = true; }
+      else { this.odds = raw; this.simMode = false; }
+      if (matchRaw !== null) this.matches = matchRaw;
+      this.buildOddsByMatch();
+    },
+
+    get oddsByMatch() {
+      const map = {};
+      for (const o of this.odds) {
+        if (!map[o.match_id]) {
+          // o.match is only present in sim data; for real data join against this.matches
+          const m = o.match || this.matches.find(x => x.id === o.match_id);
+          map[o.match_id] = {
+            match_id: o.match_id,
+            home_team: m ? m.home_team : o.match_id,
+            away_team: m ? m.away_team : '',
+            kick_off:  m ? m.kick_off  : null,
+            league:    m?.league?.name || '',
+            odds: [],
+            bestHome: 0, bestDraw: 0, bestAway: 0
+          };
+        }
+        map[o.match_id].odds.push(o);
+        if (o.home > map[o.match_id].bestHome) map[o.match_id].bestHome = o.home;
+        if (o.draw > map[o.match_id].bestDraw) map[o.match_id].bestDraw = o.draw;
+        if (o.away > map[o.match_id].bestAway) map[o.match_id].bestAway = o.away;
+      }
+      return Object.values(map);
+    },
+
+    buildOddsByMatch() {}, // triggers reactivity
+
+    async fetchOdds() {
+      this.fetchingOdds = true;
+      try {
+        const r = await this.api('/odds/fetch', { method: 'POST' });
+        if (r) {
+          this.toast(`Fetched — ${r.new_odds_stored} odds stored, ${r.arbitrage_opportunities_found} arb opportunities`, 'success');
+          await this.loadOdds();
+        }
+      } catch(e) { this.toast(e.message, 'error'); }
+      finally { this.fetchingOdds = false; }
+    },
+
+    openOddsModal(group) {
+      this.oddsModal = { open: true, match: { home_team: group.home_team, away_team: group.away_team, odds: group.odds }, bestHome: group.bestHome, bestDraw: group.bestDraw, bestAway: group.bestAway };
+    },
+
+    // ─── Matches ───
+    async loadMatches() {
+      const qs = this.matchFilter ? `?status=${this.matchFilter}` : '';
+      let raw = await this.api('/matches/' + qs);
+      if (raw === null) { this.matches = SIM_DATA.matches; this.simMode = true; }
+      else { this.matches = raw; this.simMode = false; }
+    },
+
+    get matchesByLeague() {
+      const map = {};
+      for (const m of this.matches) {
+        const name = m.league?.name || 'Unknown';
+        if (!map[name]) map[name] = { name, matches: [] };
+        map[name].matches.push(m);
+      }
+      return Object.values(map);
+    },
+
+    // ─── Arbitrage ───
+    async loadArbitrage() {
+      let raw = await this.api('/arbitrage/');
+      if (raw === null) { this.arbitrage = SIM_DATA.arbitrage; this.simMode = true; }
+      else { this.arbitrage = raw.map(a => ({ ...a, _stake: '' })); this.simMode = false; }
+    },
+
+    async loadArbHistory() {
+      let raw = await this.api('/arbitrage/history');
+      if (raw === null) { this.arbHistory = []; }
+      else { this.arbHistory = raw; }
+    },
+
+    async placeArbBet(arb) {
+      if (!arb._stake) return this.toast('Enter a stake first', 'warn');
+      if (parseFloat(arb._stake) > this.onHand) return this.toast('Stake exceeds on-hand balance', 'error');
+      try {
+        await this.api(`/bets/arbitrage/${arb.id}`, {
+          method: 'POST',
+          body: JSON.stringify({ opportunity_id: arb.id, stake: parseFloat(arb._stake) })
+        });
+        this.toast('Arbitrage bet placed!', 'success');
+        arb._stake = '';
+      } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    // ─── Cart ───
+    async loadCart() {
+      let raw = await this.api('/cart/');
+      if (raw !== null) this.cart = raw;
+    },
+
+    isInCart(match_id) {
+      return this.cart.legs && this.cart.legs.some(l => l.match_id === match_id);
+    },
+
+    async toggleCart(group, bookmaker_id, selection) {
+      if (this.isInCart(group.match_id)) {
+        const leg = this.cart.legs.find(l => l.match_id === group.match_id);
+        if (leg) await this.removeFromCart(leg.id);
+      } else {
+        try {
+          await this.api('/cart/legs', {
+            method: 'POST',
+            body: JSON.stringify({ match_id: group.match_id, bookmaker_id, selection })
+          });
+          await this.loadCart();
+          this.toast(`Added to cart`, 'success');
+        } catch(e) { this.toast(e.message, 'error'); }
+      }
+    },
+
+    async removeFromCart(leg_id) {
+      try {
+        await this.api(`/cart/legs/${leg_id}`, { method: 'DELETE' });
+        await this.loadCart();
+      } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async emptyCart() {
+      try {
+        await this.api('/cart/', { method: 'DELETE' });
+        await this.loadCart();
+      } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async placeBet() {
+      if (!this.betStake) return;
+      try {
+        await this.api('/bets/', { method: 'POST', body: JSON.stringify({ stake: parseFloat(this.betStake) }) });
+        this.toast('Bet placed!', 'success');
+        this.betStake = '';
+        await this.loadCart();
+        await this.loadBets();
+        await this.loadSummary();
+      } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    // ─── Cart helpers ───
+    getCartLegLabel(leg) {
+      // Try to find match info from loaded odds or matches
+      const oddsEntry = this.odds.find(o => o.match_id === leg.match_id);
+      if (oddsEntry && oddsEntry.match) {
+        return oddsEntry.match.home_team + ' v ' + oddsEntry.match.away_team;
+      }
+      const match = this.matches.find(m => m.id === leg.match_id);
+      if (match) return match.home_team + ' v ' + match.away_team;
+      return leg.match_id; // fallback
+    },
+
+    getCartLegOdds(leg) {
+      const row = this.odds.find(o =>
+        o.match_id === leg.match_id && o.bookmaker && o.bookmaker.id === leg.bookmaker_id
+      );
+      if (row && leg.selection) return row[leg.selection].toFixed(2);
+      return '—';
+    },
+
+    get pendingStake() {
+      return this.openBets.reduce((sum, b) => sum + (b.stake || 0), 0);
+    },
+
+    get onHand() {
+      const bankroll = parseFloat(this.settings.bankroll) || 1000;
+      return bankroll + (this.summary.profit || 0) - this.pendingStake;
+    },
+
+
+    async loadBets() {
+      let raw = await this.api('/bets/?status=pending');
+      if (raw === null) { this.openBets = SIM_DATA.openBets; this.simMode = true; }
+      else { this.openBets = raw; this.simMode = false; }
+    },
+
+    async checkResults() {
+      try {
+        const r = await this.api('/results/check', { method: 'POST' });
+        if (r) {
+          this.toast(`${r.legs_settled} legs settled`, 'success');
+          await this.loadBets();
+          await this.loadSummary();
+        }
+      } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    // ─── History ───
+    async loadSummary() {
+      const s = await this.api('/bets/summary');
+      if (s !== null) { this.summary = s; }
+      else { this.summary = SIM_DATA.summary; }
+    },
+
+    async loadHistory() {
+      await this.loadSummary();
+      const allBets = await this.api('/bets/');
+      if (allBets !== null) {
+        this.settledBets = allBets.filter(b => b.status === 'won' || b.status === 'lost');
+      }
+    },
+
+    // ─── Notifications ───
+    async loadNotifications() {
+      let raw = await this.api('/notifications/');
+      if (raw !== null) {
+        this.notifications = raw;
+        this.unreadCount = raw.length;
+      }
+    },
+
+    async markRead(id) {
+      try {
+        await this.api(`/notifications/${id}/read`, { method: 'PATCH' });
+        await this.loadNotifications();
+      } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async clearReadNotifications() {
+      try {
+        await this.api('/notifications/', { method: 'DELETE' });
+        await this.loadNotifications();
+      } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    // ─── Settings ───
+    saveSettings() {
+      localStorage.setItem('bettracker_settings', JSON.stringify(this.settings));
+      this.toast('Settings saved', 'success');
+      this.restartAutoRefresh();
+    },
+
+    loadSettings() {
+      const s = localStorage.getItem('bettracker_settings');
+      if (s) { try { this.settings = { ...this.settings, ...JSON.parse(s) }; } catch(e) {} }
+    },
+
+    toggleTheme() {
+      this.settings.theme = this.settings.theme === 'dark' ? 'light' : 'dark';
+      this.saveSettings();
+    },
+
+    async testConnection() {
+      try {
+        const r = await fetch(this.settings.apiUrl.replace(/\/$/, '') + '/config/bookmakers');
+        this.connStatus = r.ok ? 'OK ✓' : `Error ${r.status}`;
+      } catch(e) { this.connStatus = 'Unreachable ✗'; }
+    },
+
+    restartAutoRefresh() {
+      if (this._refreshTimer) clearInterval(this._refreshTimer);
+      const ms = parseInt(this.settings.refreshInterval) * 1000;
+      if (ms > 0) {
+        this._refreshTimer = setInterval(() => {
+          if (this.page === 'odds')          this.loadOdds();
+          if (this.page === 'matches')       this.loadMatches();
+          if (this.page === 'arbitrage')     this.loadArbitrage();
+          if (this.page === 'bets')          this.loadBets();
+          if (this.page === 'notifications') this.loadNotifications();
+          this.loadNotifications();
+        }, ms);
+      }
+    },
+
+    // ─── Import ───
+    onFileChange(event, tab) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (tab === 'matches') {
+          this.importFiles.matchesText = e.target.result;
+          this.importFiles.matchesName = file.name;
+        } else {
+          this.importFiles.betsText = e.target.result;
+          this.importFiles.betsName = file.name;
+        }
+        this.log(`✓ Loaded ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'ok');
+      };
+      reader.readAsText(file);
+    },
+
+    log(msg, type = 'info') {
+      this.importLog.push({ msg, type });
+      this.$nextTick(() => {
+        const el = document.getElementById('terminal-body');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    },
+
+    async runImport() {
+      this.importing = true;
+      this.importLog = [];
+      this.log('Starting import…', 'info');
+      console.log('[import] starting');
+      console.log('[import] matchesText length:', this.importFiles.matchesText.length);
+      console.log('[import] betsText length:', this.importFiles.betsText.length);
+      console.log('[import] apiUrl:', this.settings.apiUrl);
+      // ── Parse helpers ──
+      const parseCSV = (text) => {
+        const parseRow = (line) => {
+          const fields = [];
+          let cur = '', inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+              if (inQuotes && line[i+1] === '"') { cur += '"'; i++; }
+              else { inQuotes = !inQuotes; }
+            } else if (ch === ',' && !inQuotes) {
+              fields.push(cur.trim()); cur = '';
+            } else {
+              cur += ch;
+            }
+          }
+          fields.push(cur.trim());
+          return fields;
+        };
+        const lines = text.trim().split('\n');
+        const headers = parseRow(lines[0]).map(h => h.toLowerCase().trim());
+        return lines.slice(1).filter(l => l.trim()).map(l => {
+          const vals = parseRow(l);
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+          return obj;
+        });
+      };
+
+      const parseDate = (s) => {
+        // "2024.02.19 - 00:00" → ISO
+        if (!s) return null;
+        const cleaned = s.replace(/\./g, '-').replace(' - ', 'T');
+        const d = new Date(cleaned);
+        return isNaN(d.getTime()) ? null : d.toISOString();
+      };
+
+      const parseStake = (s) => {
+        // "kr 300.00" or "kr 1,156.00"
+        return parseFloat(s.replace(/[^\d.]/g, '').replace(',', '')) || 0;
+      };
+
+      const selMap = { '1': 'home', 'x': 'draw', '2': 'away' };
+
+      // ── matchNumber → match row lookup ──
+      const matchByNum = {};
+
+      // ── Step 1: Import Matches ──
+      if (this.importFiles.matchesText) {
+        this.log('── Importing Matches ──', 'head');
+        try {
+          const text = this.importFiles.matchesText;
+          const rows = parseCSV(text);
+          console.log('[import] match rows parsed:', rows.length, rows[0]);
+          this.log(`Parsed ${rows.length} match rows`, 'info');
+
+          // Build lookup
+          for (const row of rows) {
+            const num = row['match number'] || row['#'];
+            if (num) matchByNum[num] = row;
+          }
+
+          let created = 0, skipped = 0, errors = 0;
+
+          for (const row of rows) {
+            const matchId = row['match id'];
+            if (!matchId) { skipped++; continue; }
+
+            // Ensure league exists (create via bookmaker config endpoint; we call matches approach)
+            // We POST directly to our import endpoint
+            const leagueName = row['league'] || 'Unknown';
+            const leagueKey  = row['league key'] || 'unknown';
+            const country    = row['country'] || 'Unknown';
+            const homeTeam   = row['home team'];
+            const awayTeam   = row['away team'];
+            const kickOff    = parseDate(row['match date']);
+            const homeGoals  = row['home goals'] !== '' ? parseInt(row['home goals']) : null;
+            const awayGoals  = row['away goals'] !== '' ? parseInt(row['away goals']) : null;
+
+            if (!homeTeam || !awayTeam || !kickOff) {
+              this.log(`  Skip row — missing home/away/date (match ${matchId})`, 'warn');
+              skipped++; continue;
+            }
+
+            // Determine status & result
+            let status = 'upcoming';
+            let result = null;
+            if (homeGoals !== null && awayGoals !== null) {
+              status = 'finished';
+              if (homeGoals > awayGoals) result = 'home';
+              else if (awayGoals > homeGoals) result = 'away';
+              else result = 'draw';
+            }
+
+            try {
+              await this.api('/import/match', {
+                method: 'POST',
+                body: JSON.stringify({
+                  match_id: matchId,
+                  league_name: leagueName,
+                  league_key: leagueKey,
+                  country,
+                  home_team: homeTeam,
+                  away_team: awayTeam,
+                  kick_off: kickOff,
+                  home_goals: homeGoals,
+                  away_goals: awayGoals,
+                  status,
+                  result,
+                  home_odds: parseFloat(row['1']) || null,
+                  draw_odds: parseFloat(row['x']) || null,
+                  away_odds: parseFloat(row['2']) || null,
+                })
+              });
+              created++;
+              this.log(`${homeTeam} vs ${awayTeam}`, 'ok');
+            } catch(e) {
+              errors++;
+              this.log(`${homeTeam} vs ${awayTeam}: ${e.message}`, 'err');
+            }
+          }
+
+          this.log(`Matches done — ${created} imported, ${skipped} skipped, ${errors} errors`, created > 0 ? 'ok' : 'warn');
+        } catch(e) {
+          this.log(`Failed to fetch matches CSV: ${e.message}`, 'err');
+        }
+      }
+
+      // ── Step 2: Import Bets ──
+      if (this.importFiles.betsText) {
+        this.log('── Importing Bets ──', 'head');
+        try {
+          const text = this.importFiles.betsText;
+          const rows = parseCSV(text);
+          console.log('[import] bet rows parsed:', rows.length, rows[0]);
+          this.log(`Parsed ${rows.length} bet rows`, 'info');
+
+          let created = 0, skipped = 0, errors = 0;
+
+          for (const row of rows) {
+            const betType  = (row['bet type'] || '').toLowerCase();
+            const stake    = parseStake(row['stake']);
+            const matchNums = (row['matches'] || '').split(',').map(s => s.trim()).filter(Boolean);
+            const selNums   = (row['selection'] || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+            const totalOdds = parseFloat(row['total odds']) || null;
+            const placedAt  = parseDate(row['bet date']);
+
+            if (!stake || !matchNums.length || !placedAt) {
+              this.log(`  Skip — missing stake/matches/date`, 'warn');
+              skipped++; continue;
+            }
+
+            // Build legs
+            const legs = [];
+            for (let i = 0; i < matchNums.length; i++) {
+              const num = matchNums[i];
+              const matchRow = matchByNum[num];
+              if (!matchRow) {
+                this.log(`  ✗ Match #${num} not found in matches sheet`, 'err');
+                continue;
+              }
+              const sel = selMap[selNums[i]] || 'home';
+              const oddsKey = selNums[i] === '1' ? '1' : selNums[i] === 'x' ? 'x' : '2';
+              const legOdds = parseFloat(matchRow[oddsKey]) || 0;
+              legs.push({
+                match_id: matchRow['match id'],
+                selection: sel,
+                odds: legOdds
+              });
+            }
+
+            if (!legs.length) { skipped++; continue; }
+
+            // Compute potential return
+            const combinedOdds = totalOdds || legs.reduce((acc, l) => acc * (l.odds || 1), 1);
+            const potentialReturn = parseFloat((stake * combinedOdds).toFixed(2));
+
+            try {
+              await this.api('/import/bet', {
+                method: 'POST',
+                body: JSON.stringify({
+                  type: betType,
+                  stake,
+                  potential_return: potentialReturn,
+                  placed_at: placedAt,
+                  legs
+                })
+              });
+              created++;
+              this.log(`  ✓ ${betType} — stake ${stake.toFixed(2)}, ${legs.length} leg(s)`, 'ok');
+            } catch(e) {
+              errors++;
+              this.log(`  ✗ Bet ${row['bet date']}: ${e.message}`, 'err');
+            }
+          }
+
+          this.log(`Bets done — ${created} imported, ${skipped} skipped, ${errors} errors`, created > 0 ? 'ok' : 'warn');
+        } catch(e) {
+          this.log(`Failed to fetch bets CSV: ${e.message}`, 'err');
+        }
+      }
+
+      this.log('Import complete.', 'head');
+      this.importing = false;
+    },
+
+    // ─── Helpers ───
+    formatTime(dt) {
+      if (!dt) return '—';
+      return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    },
+
+    formatDateTime(dt) {
+      if (!dt) return '—';
+      const d = new Date(dt);
+      return d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' +
+             d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    },
+
+    toast(msg, type = '') {
+      const id = Date.now();
+      this.toasts.push({ id, msg, type });
+      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3500);
+    }
+  };
+}
+
+// ─── Simulation data (used when server unreachable) ───
+const SIM_DATA = {
+  odds: [
+    { id:1, match_id:'sim_m1', home:1.85, draw:3.50, away:4.20, fetched_at: new Date().toISOString(),
+      bookmaker:{ id:1, name:'Unibet', api_key:'unibet', is_active:true },
+      match:{ home_team:'Arsenal', away_team:'Chelsea', kick_off: new Date(Date.now()+86400000).toISOString(), league:{ name:'Premier League' } } },
+    { id:2, match_id:'sim_m1', home:1.90, draw:3.40, away:4.00, fetched_at: new Date().toISOString(),
+      bookmaker:{ id:2, name:'Bet365', api_key:'bet365', is_active:true },
+      match:{ home_team:'Arsenal', away_team:'Chelsea', kick_off: new Date(Date.now()+86400000).toISOString(), league:{ name:'Premier League' } } },
+    { id:3, match_id:'sim_m2', home:2.20, draw:3.10, away:3.50, fetched_at: new Date().toISOString(),
+      bookmaker:{ id:1, name:'Unibet', api_key:'unibet', is_active:true },
+      match:{ home_team:'Real Madrid', away_team:'Barcelona', kick_off: new Date(Date.now()+172800000).toISOString(), league:{ name:'La Liga' } } },
+  ],
+  matches: [
+    { id:'sim_m1', home_team:'Arsenal', away_team:'Chelsea', kick_off: new Date(Date.now()+86400000).toISOString(), status:'upcoming', result:null, home_goals:null, away_goals:null, league:{ name:'Premier League' } },
+    { id:'sim_m2', home_team:'Real Madrid', away_team:'Barcelona', kick_off: new Date(Date.now()+172800000).toISOString(), status:'upcoming', result:null, home_goals:null, away_goals:null, league:{ name:'La Liga' } },
+  ],
+  arbitrage: [
+    { id:1, margin_percent:1.23, home_odds:2.10, draw_odds:3.80, away_odds:5.00,
+      home_bookmaker:{ name:'Unibet' }, draw_bookmaker:{ name:'Bet365' }, away_bookmaker:{ name:'Pinnacle' },
+      match:{ home_team:'Napoli', away_team:'Inter', kick_off: new Date(Date.now()+3600000).toISOString() },
+      _stake: '' }
+  ],
+  openBets: [
+    { id:1, type:'double', stake:300, potential_return:1332, status:'pending', placed_at: new Date(Date.now()-86400000).toISOString(), legs:[
+      { id:1, selection:'away', odds:2.22, result:'pending', match:{ home_team:'Arsenal', away_team:'Chelsea' }, bookmaker:{ name:'Unibet' } },
+      { id:2, selection:'home', odds:2.00, result:'pending', match:{ home_team:'Real Madrid', away_team:'Barcelona' }, bookmaker:{ name:'Unibet' } },
+    ]}
+  ],
+  summary: { bets:15, won:6, lost:9, staked:5200, returned:4800, profit:-400, roi_percent:-7.7, win_rate_percent:40, open_bets:2, by_type:{ double:{ bets:13, won:5, lost:8, staked:4700, returned:4300, profit:-400, roi_percent:-8.5 }, arbitrage:{ bets:1, won:1, lost:0, staked:500, returned:510, profit:10, roi_percent:2.0 } }, by_league:{}, by_bookmaker:{} }
+};
+</script>
+</body>
+</html>
