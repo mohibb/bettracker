@@ -1,5 +1,5 @@
 from unittest.mock import patch, MagicMock
-from conftest import make_league, make_match, make_bookmaker, make_odds, make_api_key, TestingSessionLocal
+from factories import make_league, make_match, make_bookmaker, make_odds, TestingSessionLocal
 
 
 class TestGetOdds:
